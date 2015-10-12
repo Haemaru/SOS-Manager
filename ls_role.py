@@ -9,7 +9,7 @@ class LSRole(object):
     def read_by_bin(bin_data):
         offset = 0
         roles_list = list()
-        roles_tree = list()
+        roles_tree = LSRole("root")
 
         while offset < len(bin_data):
             role_name_len = bin_num(bin_data[offset], 1)
@@ -51,8 +51,8 @@ class LSRole(object):
 
         for i in range(len(roles_list)):
             if roles_list[i].parent_role_name == "":
-                roles_tree.append(roles_list[i])
-                roles_list[i].parent_role = None
+                roles_tree.child_roles.append(roles_list[i])
+                roles_list[i].parent_role = roles_tree
             else:
                 for j in range(len(roles_list)):
                     if roles_list[i].parent_role_name == roles_list[j].role_name:
@@ -259,16 +259,15 @@ def read_data():
 
 def tree_traversal(roles_tree_node, depth):
 
-    for i in range(len(roles_tree_node)):
-        text = ""
-        for j in range(depth):
-            text += "\t"
-        text += "-"
-        text += roles_tree_node[i].role_name
-        print(text)
+    text = ""
+    for i in range(depth):
+        text += "\t"
+    text += "-"
+    text += roles_tree_node.role_name
+    print(text)
 
-        if len(roles_tree_node[i].child_roles) > 0:
-            tree_traversal(roles_tree_node[i].child_roles, depth + 1)
+    for i in range(len(roles_tree_node.child_roles)):
+        tree_traversal(roles_tree_node.child_roles[i], depth + 1)
 
 
 def main():

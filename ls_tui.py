@@ -1,18 +1,57 @@
+from ls_role import read_data
+from ls_role import write_data
+
 import urwid
 
-def show_or_exit(key):
-    if key in ('q', 'Q'):
-        raise urwid.ExitMainLoop()
-    txt.set_text(repr(key))
 
-palette = [
-    ('banner', 'black', 'light gray'),
-    ('streak', 'black', 'dark red'),
-    ('bg', 'black', 'dark blue'),]
+class LSRolesTreeWidget(urwid.TreeWidget):
 
-txt = urwid.Text(('banner', u" Hello World "), align='center')
-map1 = urwid.AttrMap(txt, 'streak')
-fill = urwid.Filler(map1)
-map2 = urwid.AttrMap(fill, 'bg')
-loop = urwid.MainLoop(map2, palette, unhandled_input=show_or_exit)
-loop.run()
+    def get_display_text(self):
+        return self.get_node().get_value().role_name
+
+    def selectable(self):
+        return True
+
+
+class LSRolesNode(urwid.TreeNode):
+
+    def load_widget(self):
+        return LSRolesTreeWidget(self)
+
+
+class LSRolesParentNode(urwid.ParentNode):
+
+    def load_parent(self):
+        return self.get_value().parent_role
+
+    def load_widget(self):
+        return LSRolesTreeWidget(self)
+
+    def load_child_keys(self):
+        return range(len(self.get_value().child_roles))
+
+    def load_child_node(self, key):
+        childdata = self.get_value().child_roles[key]
+        childdepth = self.get_depth() + 1
+        if len(childdata.child_roles) == 0:
+            childclass = LSRolesNode
+        else:
+            childclass = LSRolesParentNode
+        return childclass(childdata, parent=self, key=key, depth=childdepth)
+
+
+def main():
+
+    write_data()
+
+    roles_tree = read_data()
+
+    topnode = LSRolesParentNode(roles_tree)
+    listbox = urwid.TreeListBox(urwid.TreeWalker(topnode))
+    listbox.offset_rows = 1
+
+    urwid.MainLoop(urwid.Frame(listbox)).run()
+
+
+if __name__ == "__main__":
+    main()
