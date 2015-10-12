@@ -10,7 +10,6 @@ def num_bin(num, size):
 def bin_num(binary, size):
     ret = 0
     for i in range(size):
-        print(binary[i])
         ret |= ord(binary[i]) << (i * 8)
 
     return ret

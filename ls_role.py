@@ -8,48 +8,66 @@ class LSRole(object):
     @staticmethod
     def read_by_bin(bin_data):
         offset = 0
+        roles_list = list()
+        roles_tree = list()
 
-        role_name_len = bin_data[offset]
-        offset += 1
-        role_name = bin_data[offset:(offset + role_name_len)]
-        offset += role_name_len
+        while offset < len(bin_data):
+            role_name_len = bin_num(bin_data[offset], 1)
+            offset += 1
+            role_name = bin_data[offset:(offset + role_name_len)]
+            offset += role_name_len
 
-        parent_role_name_len = bin_data[offset]
-        offset += 1
-        parent_role_name = bin_data[offset:(offset + parent_role_name_len)]
-        offset += parent_role_name_len
+            parent_role_name_len = bin_num(bin_data[offset], 1)
+            offset += 1
+            parent_role_name = bin_data[offset:(offset + parent_role_name_len)]
+            offset += parent_role_name_len
 
-        attr_count = bin_num(bin_data[offset:(offset + 4)], 4)
-        offset = 600
+            attr_count = bin_num(bin_data[offset:(offset + 4)], 4)
+            offset += (600 - role_name_len - parent_role_name_len - 2)
 
-        role = LSRole(role_name, parent_role_name, attr_count)
+            role = LSRole(role_name, parent_role_name, attr_count)
 
-        for i in range(attr_count):
-            attr_data = bin_data[offset:(offset + 10)]
-            offset += 10
+            for i in range(attr_count):
+                attr_data = bin_data[offset:(offset + 10)]
+                offset += 10
 
-            if bin_data[offset] == b'\x00':
-                role.file_roles.append(
-                    LSFileRole.read_by_bin(attr_data))
-            elif bin_data[offset] == b'\x01':
-                role.network_roles.append(
-                    LSNetworkRole.read_by_bin(attr_data))
-            elif bin_data[offset] == b'\x02':
-                role.process_roles.append(
-                    LSProcessRole.read_by_bin(attr_data))
-            elif bin_data[offset] == b'\xfe':
-                role.bind_processes.append(
-                    LSBindProcess.read_by_bin(attr_data))
-            elif bin_data[offset] == b'\xff':
-                role.bind_users.append(
-                    LSBindUser.read_by_bin(attr_data))
+                if attr_data[0] == b'\x00':
+                    role.file_roles.append(
+                        LSFileRole.read_by_bin(attr_data))
+                elif attr_data[0] == b'\x01':
+                    role.network_roles.append(
+                        LSNetworkRole.read_by_bin(attr_data))
+                elif attr_data[0] == b'\x02':
+                    role.process_roles.append(
+                        LSProcessRole.read_by_bin(attr_data))
+                elif attr_data[0] == b'\xfe':
+                    role.bind_processes.append(
+                        LSBindProcess.read_by_bin(attr_data))
+                elif attr_data[0] == b'\xff':
+                    role.bind_users.append(
+                        LSBindUser.read_by_bin(attr_data))
 
-        return role
+            roles_list.append(role)
+
+        for i in range(len(roles_list)):
+            if roles_list[i].parent_role_name == "":
+                roles_tree.append(roles_list[i])
+                roles_list[i].parent_role = None
+            else:
+                for j in range(len(roles_list)):
+                    if roles_list[i].parent_role_name == roles_list[j].role_name:
+                        roles_list[i].parent_role = roles_list[j]
+                        roles_list[j].child_roles.append(roles_list[i])
+
+        return roles_tree
 
     def __init__(self, role_name="", parent_role_name="", attr_count=0):
         self.role_name = role_name
         self.parent_role_name = parent_role_name
         self.attr_count = attr_count
+
+        self.child_roles = list()
+        self.parent_role = None
 
         self.file_roles = list()
         self.network_roles = list()
@@ -109,9 +127,9 @@ class LSNetworkRole(object):
         f.write(num_bin(self.port, 2))
 
         if self.is_allow_open:
-            f.write(num_bin(1, 1))
-        else:
             f.write(num_bin(0, 1))
+        else:
+            f.write(num_bin(1, 1))
 
         f.write(b'\xff' * 6)
 
@@ -125,9 +143,9 @@ class LSProcessRole(object):
     def read_by_bin(bin_data):
         return LSProcessRole(
             bin_num(bin_data[1:9], 8),
-            is_bit_flagged(bin_data[9], 0b100),
-            is_bit_flagged(bin_data[9], 0b010),
-            is_bit_flagged(bin_data[9], 0b001))
+            is_bit_flagged(ord(bin_data[9]), 0b100),
+            is_bit_flagged(ord(bin_data[9]), 0b010),
+            is_bit_flagged(ord(bin_data[9]), 0b001))
 
     def __init__(
         self,
@@ -148,10 +166,10 @@ class LSProcessRole(object):
 
         if self.id_type == LSProcessRole.TYPE_INODE:
             flag |= 0b100
-        if self.is_allow_trace:
+        if self.is_allow_trace is False:
             flag |= 0b010
-        if self.is_allow_kill:
-            flag |= 0b010
+        if self.is_allow_kill is False:
+            flag |= 0b001
 
         f.write(num_bin(self.id_value, 8))
         f.write(num_bin(flag, 1))
@@ -166,7 +184,7 @@ class LSBindProcess(object):
     def read_by_bin(bin_data):
         return LSBindProcess(
             bin_num(bin_data[1:9], 8),
-            is_bit_flagged(bin_data[9], 0b001))
+            is_bit_flagged(ord(bin_data[9]), 0b001))
 
     def __init__(self, id_value=0, id_type=TYPE_PID):
         self.id_value = id_value
@@ -199,14 +217,67 @@ class LSBindUser(object):
         f.write(b'\xff' * 5)
 
 
-def main():
+def write_data():
+
     with open("./data.sos", "w") as f:
-        LSRole("test", "parent_test", 5).write(f)
-        LSFileRole(123123, 7).write(f)
+        LSRole("test1", "", 3).write(f)
+        LSFileRole(1000001, 7).write(f)
         LSNetworkRole(8080, True).write(f)
-        LSProcessRole(456456, LSProcessRole.TYPE_INODE, False, False).write(f)
-        LSBindProcess(789789, LSBindProcess.TYPE_PID).write(f)
-        LSBindUser(10101).write(f)
+        LSProcessRole(2000001, LSProcessRole.TYPE_INODE, True, True).write(f)
+
+        LSRole("test2", "test1", 3).write(f)
+        LSFileRole(1000002, 7).write(f)
+        LSNetworkRole(8090, True).write(f)
+        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
+
+        LSRole("test3", "test1", 3).write(f)
+        LSFileRole(1000002, 7).write(f)
+        LSNetworkRole(8090, True).write(f)
+        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
+
+        LSRole("test4", "test3", 3).write(f)
+        LSFileRole(1000002, 7).write(f)
+        LSNetworkRole(8090, True).write(f)
+        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
+
+        LSRole("test5", "test3", 3).write(f)
+        LSFileRole(1000002, 7).write(f)
+        LSNetworkRole(8090, True).write(f)
+        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
+
+        LSRole("test6", "test2", 3).write(f)
+        LSFileRole(1000002, 7).write(f)
+        LSNetworkRole(8090, True).write(f)
+        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
+
+
+def read_data():
+
+    with open("./data.sos", "r") as f:
+        return LSRole.read_by_bin(f.read())
+
+
+def tree_traversal(roles_tree_node, depth):
+
+    for i in range(len(roles_tree_node)):
+        text = ""
+        for j in range(depth):
+            text += "\t"
+        text += "-"
+        text += roles_tree_node[i].role_name
+        print(text)
+
+        if len(roles_tree_node[i].child_roles) > 0:
+            tree_traversal(roles_tree_node[i].child_roles, depth + 1)
+
+
+def main():
+
+    write_data()
+
+    roles_tree = read_data()
+
+    tree_traversal(roles_tree, 0)
 
 
 if __name__ == '__main__':
