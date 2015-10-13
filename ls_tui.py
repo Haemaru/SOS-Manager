@@ -40,6 +40,11 @@ class LSRolesParentNode(urwid.ParentNode):
         return childclass(childdata, parent=self, key=key, depth=childdepth)
 
 
+def exit(key):
+    if key in ('q', 'Q'):
+        raise urwid.ExitMainLoop()
+
+
 def main():
 
     write_data()
@@ -50,7 +55,13 @@ def main():
     listbox = urwid.TreeListBox(urwid.TreeWalker(topnode))
     listbox.offset_rows = 1
 
-    urwid.MainLoop(urwid.Frame(listbox)).run()
+    listbox2 = urwid.ListBox(urwid.SimpleFocusListWalker([
+        urwid.Button("btn1"),
+        urwid.Button("btn2")]))
+
+    columns = urwid.Columns([listbox, listbox2])
+
+    urwid.MainLoop(urwid.Frame(columns), unhandled_input=exit).run()
 
 
 if __name__ == "__main__":

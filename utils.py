@@ -1,5 +1,6 @@
 
 def num_bin(num, size):
+
     b = bytearray(size)
     for i in range(size):
         b[i] = (num & (0xff << (i * 8))) >> (i * 8)
@@ -8,14 +9,13 @@ def num_bin(num, size):
 
 
 def bin_num(binary, size):
-    ret = 0
-    for i in range(size):
-        ret |= ord(binary[i]) << (i * 8)
 
-    return ret
+    n = 0
+    for i in range(size):
+        n += binary[i] << (i * 8)
+
+    return n
 
 
 def is_bit_flagged(data, flag_bit):
     return (data & flag_bit) != flag_bit
-
-GLOBAL_VAR = [1, 2, 3]

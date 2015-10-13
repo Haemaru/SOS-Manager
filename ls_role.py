@@ -7,19 +7,20 @@ class LSRole(object):
 
     @staticmethod
     def read_by_bin(bin_data):
+
         offset = 0
         roles_list = list()
-        roles_tree = LSRole("root")
+        roles_tree = LSRole('root')
 
         while offset < len(bin_data):
-            role_name_len = bin_num(bin_data[offset], 1)
+            role_name_len = bin_data[offset]
             offset += 1
-            role_name = bin_data[offset:(offset + role_name_len)]
+            role_name = bin_data[offset:(offset + role_name_len)].decode('utf-8')
             offset += role_name_len
 
-            parent_role_name_len = bin_num(bin_data[offset], 1)
+            parent_role_name_len = bin_data[offset]
             offset += 1
-            parent_role_name = bin_data[offset:(offset + parent_role_name_len)]
+            parent_role_name = bin_data[offset:(offset + parent_role_name_len)].decode('utf-8')
             offset += parent_role_name_len
 
             attr_count = bin_num(bin_data[offset:(offset + 4)], 4)
@@ -31,26 +32,28 @@ class LSRole(object):
                 attr_data = bin_data[offset:(offset + 10)]
                 offset += 10
 
-                if attr_data[0] == b'\x00':
+                if attr_data[0] == 0x01:
                     role.file_roles.append(
                         LSFileRole.read_by_bin(attr_data))
-                elif attr_data[0] == b'\x01':
+                elif attr_data[0] == 0x02:
                     role.network_roles.append(
                         LSNetworkRole.read_by_bin(attr_data))
-                elif attr_data[0] == b'\x02':
+                elif attr_data[0] == 0x03:
                     role.process_roles.append(
                         LSProcessRole.read_by_bin(attr_data))
-                elif attr_data[0] == b'\xfe':
+                elif attr_data[0] == 0xfe:
                     role.bind_processes.append(
                         LSBindProcess.read_by_bin(attr_data))
-                elif attr_data[0] == b'\xff':
+                elif attr_data[0] == 0xff:
                     role.bind_users.append(
                         LSBindUser.read_by_bin(attr_data))
+                else:
+                    print("Error")
 
             roles_list.append(role)
 
         for i in range(len(roles_list)):
-            if roles_list[i].parent_role_name == "":
+            if roles_list[i].parent_role_name == '':
                 roles_tree.child_roles.append(roles_list[i])
                 roles_list[i].parent_role = roles_tree
             else:
@@ -58,6 +61,8 @@ class LSRole(object):
                     if roles_list[i].parent_role_name == roles_list[j].role_name:
                         roles_list[i].parent_role = roles_list[j]
                         roles_list[j].child_roles.append(roles_list[i])
+
+        print(roles_tree.child_roles)
 
         return roles_tree
 
@@ -81,13 +86,13 @@ class LSRole(object):
         parent_role_name_len = len(self.parent_role_name)
 
         f.write(num_bin(role_name_len, 1))
-        f.write(self.role_name.encode('ascii'))
+        f.write(self.role_name.encode('utf-8'))
 
         if self.parent_role_name == "":
             f.write(b'\x00')
         else:
             f.write(num_bin(parent_role_name_len, 1))
-            f.write(self.parent_role_name.encode('ascii'))
+            f.write(self.parent_role_name.encode('utf-8'))
 
         f.write(num_bin(self.attr_count, 4))
 
@@ -143,9 +148,9 @@ class LSProcessRole(object):
     def read_by_bin(bin_data):
         return LSProcessRole(
             bin_num(bin_data[1:9], 8),
-            is_bit_flagged(ord(bin_data[9]), 0b100),
-            is_bit_flagged(ord(bin_data[9]), 0b010),
-            is_bit_flagged(ord(bin_data[9]), 0b001))
+            is_bit_flagged(bin_data[9], 0b100),
+            is_bit_flagged(bin_data[9], 0b010),
+            is_bit_flagged(bin_data[9], 0b001))
 
     def __init__(
         self,
@@ -184,7 +189,7 @@ class LSBindProcess(object):
     def read_by_bin(bin_data):
         return LSBindProcess(
             bin_num(bin_data[1:9], 8),
-            is_bit_flagged(ord(bin_data[9]), 0b001))
+            is_bit_flagged(bin_data[9], 0b001))
 
     def __init__(self, id_value=0, id_type=TYPE_PID):
         self.id_value = id_value
@@ -219,7 +224,7 @@ class LSBindUser(object):
 
 def write_data():
 
-    with open("./data.sos", "w") as f:
+    with open("./data.sos", "wb") as f:
         LSRole("test1", "", 3).write(f)
         LSFileRole(1000001, 7).write(f)
         LSNetworkRole(8080, True).write(f)
@@ -253,17 +258,17 @@ def write_data():
 
 def read_data():
 
-    with open("./data.sos", "r") as f:
-        return LSRole.read_by_bin(f.read())
+    with open("./data.sos", "rb") as f:
+        return LSRole.read_by_bin(bytearray(f.read()))
 
 
 def tree_traversal(roles_tree_node, depth):
 
     text = ""
     for i in range(depth):
-        text += "\t"
+        text += "  "
     text += "-"
-    text += roles_tree_node.role_name
+    text += str(roles_tree_node.role_name)
     print(text)
 
     for i in range(len(roles_tree_node.child_roles)):
