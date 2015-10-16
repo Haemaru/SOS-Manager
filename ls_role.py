@@ -10,17 +10,23 @@ class LSRole(object):
 
         offset = 0
         roles_list = list()
-        roles_tree = LSRole('root')
+        roles_tree = LSRole('default')
 
         while offset < len(bin_data):
             role_name_len = bin_data[offset]
             offset += 1
-            role_name = bin_data[offset:(offset + role_name_len)].decode('utf-8')
+            role_name = bin_data[
+                offset:(offset + role_name_len)
+            ].decode('ascii')
+
             offset += role_name_len
 
             parent_role_name_len = bin_data[offset]
             offset += 1
-            parent_role_name = bin_data[offset:(offset + parent_role_name_len)].decode('utf-8')
+            parent_role_name = bin_data[
+                offset:(offset + parent_role_name_len)
+            ].decode('ascii')
+
             offset += parent_role_name_len
 
             attr_count = bin_num(bin_data[offset:(offset + 4)], 4)
@@ -58,7 +64,8 @@ class LSRole(object):
                 roles_list[i].parent_role = roles_tree
             else:
                 for j in range(len(roles_list)):
-                    if roles_list[i].parent_role_name == roles_list[j].role_name:
+                    if roles_list[i].parent_role_name == \
+                            roles_list[j].role_name:
                         roles_list[i].parent_role = roles_list[j]
                         roles_list[j].child_roles.append(roles_list[i])
 
@@ -86,13 +93,13 @@ class LSRole(object):
         parent_role_name_len = len(self.parent_role_name)
 
         f.write(num_bin(role_name_len, 1))
-        f.write(self.role_name.encode('utf-8'))
+        f.write(self.role_name.encode('ascii'))
 
         if self.parent_role_name == "":
             f.write(b'\x00')
         else:
             f.write(num_bin(parent_role_name_len, 1))
-            f.write(self.parent_role_name.encode('utf-8'))
+            f.write(self.parent_role_name.encode('ascii'))
 
         f.write(num_bin(self.attr_count, 4))
 
@@ -225,30 +232,32 @@ class LSBindUser(object):
 def write_data():
 
     with open("./data.sos", "wb") as f:
-        LSRole("test1", "", 3).write(f)
+        LSRole("test1", "", 5).write(f)
+        LSFileRole(1000001, 7).write(f)
+        LSFileRole(1000001, 7).write(f)
         LSFileRole(1000001, 7).write(f)
         LSNetworkRole(8080, True).write(f)
         LSProcessRole(2000001, LSProcessRole.TYPE_INODE, True, True).write(f)
 
-        LSRole("test2", "test1", 3).write(f)
+        LSRole("test2", "test1", 5).write(f)
         LSFileRole(1000002, 7).write(f)
+        LSNetworkRole(8090, True).write(f)
+        LSNetworkRole(8090, True).write(f)
         LSNetworkRole(8090, True).write(f)
         LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
 
-        LSRole("test3", "test1", 3).write(f)
+        LSRole("test3", "test1", 5).write(f)
         LSFileRole(1000002, 7).write(f)
         LSNetworkRole(8090, True).write(f)
+        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
+        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
         LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
 
-        LSRole("test4", "test3", 3).write(f)
-        LSFileRole(1000002, 7).write(f)
-        LSNetworkRole(8090, True).write(f)
+        LSRole("test4", "test3", 1).write(f)
         LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
 
-        LSRole("test5", "test3", 3).write(f)
+        LSRole("test5", "test3", 1).write(f)
         LSFileRole(1000002, 7).write(f)
-        LSNetworkRole(8090, True).write(f)
-        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
 
         LSRole("test6", "test2", 3).write(f)
         LSFileRole(1000002, 7).write(f)
