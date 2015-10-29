@@ -107,13 +107,18 @@ class LSRole(object):
 
 class LSFileRole(list):
 
+    # key value is VALUES[0]
+    VALUES = (
+        ('i_ino', int, 8),
+        ('u_acc', int, 1))
+
     @staticmethod
     def read_by_bin(bin_data):
         return LSFileRole(bin_num(bin_data[1:9], 8), bin_data[9])
 
     def __init__(self, i_ino=0, u_acc=0):
-        self.append(('i_ino', i_ino))
-        self.append(('u_acc', u_acc))
+        self.append(['i_ino', i_ino])
+        self.append(['u_acc', u_acc])
 
     def write(self, f):
         f.write(b'\x01')
@@ -123,13 +128,19 @@ class LSFileRole(list):
 
 class LSNetworkRole(list):
 
+    VALUES = (
+        ('port', int, 2),
+        ('is_allow_open', bool, ('true', 'false')))
+
     @staticmethod
     def read_by_bin(bin_data):
-        return LSNetworkRole(bin_num(bin_data[1:3], 2), bin_data[3])
+        return LSNetworkRole(
+            bin_num(bin_data[1:3], 2),
+            is_bit_flagged(bin_data[3], 0b001))
 
     def __init__(self, port=0, is_allow_open=True):
-        self.append(('port', port))
-        self.append(('is_allow_open', is_allow_open))
+        self.append(['port', port])
+        self.append(['is_allow_open', is_allow_open])
 
     def write(self, f):
         f.write(b'\x02')
@@ -144,6 +155,12 @@ class LSNetworkRole(list):
 
 
 class LSProcessRole(list):
+
+    VALUES = (
+        ('id_value', int, 8),
+        ('id_type', bool, ('pid', 'inode')),
+        ('is_allow_kill', bool, ('true', 'false')),
+        ('is_allow_trace', bool, ('true', 'false')))
 
     TYPE_PID = 0
     TYPE_INODE = 1
@@ -163,10 +180,10 @@ class LSProcessRole(list):
         is_allow_kill=True,
         is_allow_trace=True
     ):
-        self.append(('id_value', id_value))
-        self.append(('id_type', id_type))
-        self.append(('is_allow_kill', is_allow_kill))
-        self.append(('is_allow_trace', is_allow_trace))
+        self.append(['id_value', id_value])
+        self.append(['id_type', id_type])
+        self.append(['is_allow_kill', is_allow_kill])
+        self.append(['is_allow_trace', is_allow_trace])
 
     def write(self, f):
         f.write(b'\x03')
@@ -186,6 +203,10 @@ class LSProcessRole(list):
 
 class LSBindProcess(list):
 
+    VALUES = (
+        ('id_value', int, 8),
+        ('id_type', bool, ('pid', 'inode')))
+
     TYPE_PID = 0
     TYPE_INODE = 1
 
@@ -196,8 +217,8 @@ class LSBindProcess(list):
             is_bit_flagged(bin_data[9], 0b001))
 
     def __init__(self, id_value=0, id_type=TYPE_PID):
-        self.append(('id_value', id_value))
-        self.append(('id_type', id_type))
+        self.append(['id_value', id_value])
+        self.append(['id_type', id_type])
 
     def write(self, f):
         f.write(b'\xfe')
@@ -213,12 +234,15 @@ class LSBindProcess(list):
 
 class LSBindUser(list):
 
+    VALUES = (
+        ('uid', int, 4))
+
     @staticmethod
     def read_by_bin(bin_data):
         return LSBindUser(bin_num(bin_data[1:5], 4))
 
     def __init__(self, uid=0):
-        self.append(('uid', uid))
+        self.append(['uid', uid])
 
     def write(self, f):
         f.write(b'\xff')
@@ -226,7 +250,7 @@ class LSBindUser(list):
         f.write(b'\xff' * 5)
 
 
-def write_data():
+def write_data(roles_tree):
 
     with open("./data.sos", "wb") as f:
         LSRole("test1", "", 5).write(f)
@@ -273,8 +297,6 @@ def main():
     write_data()
 
     roles_tree = read_data()
-
-    tree_traversal(roles_tree, 0)
 
 
 if __name__ == '__main__':

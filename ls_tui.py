@@ -1,4 +1,7 @@
-from ls_role import read_data, write_data, LSRole
+from ls_role import read_data, write_data
+from ls_role import LSRole
+from ls_role import LSFileRole, LSNetworkRole, LSProcessRole
+from ls_role import LSBindProcess, LSBindUser
 
 import urwid
 
@@ -136,7 +139,6 @@ class LSRolesTreeWidget(urwid.TreeWidget):
         self.is_modifying = True
         self.inner_edit.set_modifiable(True)
         self.inner_columns.set_focus_column(1)
-        # self.inner_edit.move_cursor_to_coords((20, ), 15, 0)
 
     def set_focus_to_icon(self):
         self.is_modifying = False
@@ -308,15 +310,32 @@ class LSAttrTypesListBox(urwid.ListBox):
             self.role.bind_processes,
             self.role.bind_users
         ]
+        attr_classes = [
+            LSFileRole,
+            LSNetworkRole,
+            LSProcessRole,
+            LSBindProcess,
+            LSBindUser
+        ]
         attr_type = attr_types[focus]
+        attr_class = attr_classes[focus]
 
-        self.attrs_list.set_attr_type(attr_type)
+        self.attrs_list.set_attr_type(attr_type, attr_class)
 
 
 class LSAttrTypesListWalker(urwid.SimpleFocusListWalker):
 
     def __init__(self, contents):
         urwid.SimpleFocusListWalker.__init__(self, contents)
+
+
+class LSAttrsListBoxEdit(urwid.Edit):
+
+    def selectable(self):
+        return True
+
+    def keypress(self, size, key):
+        return key
 
 
 class LSAttrsListBox(urwid.ListBox):
@@ -346,30 +365,50 @@ class LSAttrsListBox(urwid.ListBox):
 
     def keypress(self, size, key):
         if key == 'c':
-            log(self.attr_type.__class__)
+            self.create_attr()
+        elif key == 'd':
+            self.delete_attr()
 
-        return urwid.ListBox.keypress(self, size, key)
+        key = urwid.ListBox.keypress(self, size, key)
 
-    def set_attr_type(self, attr_type=None):
-        if attr_type is not None:
+        if key == 'enter':
+            self.set_attr()
+
+        return key
+
+    def create_attr(self):
+        self.attr_type.append(self.attr_class())
+        self.set_attr_type()
+        self.set_focus(len(self.attr_type) - 1)
+
+    def delete_attr(self):
+        del self.attr_type[self.get_focus()[1]]
+        self.set_attr_type()
+
+    def set_attr_type(self, attr_type=None, attr_class=None):
+        if attr_type is not None and attr_class is not None:
             self.attr_type = attr_type
+            self.attr_class = attr_class
 
         del self.body[:]
 
-        for attr in attr_type:
-            self.body.append(urwid.Edit(attr[0][0] + ' : ' + str(attr[0][1])))
+        for attr in self.attr_type:
+            self.body.append(
+                LSAttrsListBoxEdit(
+                    attr[0][0] + ' : ' + str(attr[0][1])))
 
         self.set_attr()
 
     def set_attr(self):
-        focus = self.get_focus()[1]
+        focus = self.get_focus()
+        log(focus)
 
-        if focus is not None:
-            attr = self.attr_type[focus]
+        if focus[1] is not None:
+            attr = self.attr_type[focus[1]]
         else:
             attr = None
 
-        self.values_list.set_attr(attr)
+        self.values_list.set_attr(attr, focus[0])
 
 
 class LSAttrsListWalker(urwid.SimpleFocusListWalker):
@@ -378,21 +417,113 @@ class LSAttrsListWalker(urwid.SimpleFocusListWalker):
         urwid.SimpleFocusListWalker.__init__(self, contents)
 
 
+class LSAttrValuesListBoxIntEdit(urwid.IntEdit):
+
+    def __init__(
+        self,
+        caption=u"",
+        default=None,
+        int_data=None
+    ):
+        urwid.Edit.__init__(
+            self,
+            caption,
+            default)
+        self.int_data = int_data
+        self.modifiable = False
+
+    def selectable(self):
+        return True
+
+    def set_modifiable(self, modifiable):
+        self.modifiable = modifiable
+
+    def keypress(self, size, key):
+        if self.modifiable is True:
+            if key == 'enter':
+                self.modifiable = False
+                self.int_data[1] = self.get_edit_text()
+            else:
+                key = urwid.Edit.keypress(self, size, key)
+        else:
+            if key == 'enter':
+                self.modifiable = True
+
+            return key
+
+
+class LSAttrValuesListBoxBoolEdit(urwid.Edit):
+
+    def __init__(
+        self,
+        caption=u"",
+        edit_text=u"",
+        multiline=False,
+        align=urwid.LEFT,
+        wrap=urwid.SPACE,
+        allow_tab=False,
+        edit_pos=None,
+        layout=None,
+        mask=None,
+        bool_data=None,
+        bool_text=None
+    ):
+        urwid.Edit.__init__(
+            self,
+            caption,
+            edit_text,
+            multiline,
+            align,
+            wrap,
+            allow_tab,
+            edit_pos,
+            layout,
+            mask)
+        self.bool_data = bool_data
+        self.bool_text = bool_text
+
+    def selectable(self):
+        return True
+
+    def keypress(self, size, key):
+        if key == 'enter':
+            self.bool_data[1] = bool(self.bool_data[1] ^ True)
+            self.set_edit_text(self.bool_text[int(self.bool_data[1] ^ True)])
+
+        return key
+
+
 class LSAttrValuesListBox(urwid.ListBox):
 
     def __init__(self, body):
         urwid.ListBox.__init__(self, body)
 
-    def set_attr(self, attr):
+    def set_attr(self, attr, attr_edit):
         self.attr = attr
+        self.attr_edit = attr_edit
 
         del self.body[:]
 
         if attr is not None:
-            for value in attr:
-                self.body.append(urwid.Edit(
-                    str(value[0]) + ' : ',
-                    str(value[1])))
+            for i in range(len(attr)):
+                if self.attr.VALUES[i][1] == int:
+                    self.body.append(LSAttrValuesListBoxIntEdit(
+                        str(attr[i][0]) + ' : ',
+                        str(attr[i][1]),
+                        int_data=self.attr[i]))
+                else:
+                    self.body.append(LSAttrValuesListBoxBoolEdit(
+                        str(attr[i][0]) + ' : ',
+                        attr.VALUES[i][2][int(self.attr[i][1] ^ True)],
+                        bool_data=self.attr[i],
+                        bool_text=self.attr.VALUES[i][2]))
+
+    def keypress(self, size, key):
+        if self.get_focus()[1] == 0 and key == 'enter':
+            self.attr_edit.set_caption(
+                self.attr.VALUES[0][0] + ' : ' + self.body[0].get_edit_text())
+
+        return urwid.ListBox.keypress(self, size, key)
 
 
 class LSAttrValuesListWalker(urwid.SimpleFocusListWalker):
@@ -409,10 +540,12 @@ class LSColumns(urwid.Columns):
         return key
 
 
-def exit(key):
+def save_or_exit(key):
     if key in ('q', 'Q'):
         log('-----------------exit------------------')
         raise urwid.ExitMainLoop()
+    elif key == 's':
+        log('s')
 
 
 f = open("log.txt", "w")
@@ -423,7 +556,6 @@ def log(text):
     f.flush()
 
 
-write_data()
 roles_data = read_data()
 
 attr_values_list_walker = LSAttrValuesListWalker([])
@@ -443,8 +575,6 @@ attr_types_list_box = LSAttrTypesListBox(
     attrs_list_box)
 
 roles_root_node = LSRolesTreeNode(roles_data)
-log('origin ' + str(id(roles_root_node)))
-log(type(roles_root_node))
 
 roles_tree_walker = LSRolesTreeWalker(roles_root_node)
 roles_tree_box = LSRolesTreeListBox(
@@ -471,7 +601,7 @@ def node_traversal(node, depth):
     for i in range(depth):
         text += "  "
     text += "-"
-    text += str(node.get_value().role_name + ' - ' + \
+    text += str(node.get_value().role_name + ' - ' +
         str([node._children[n].get_value().role_name for n in node._children]))
     log(text)
 
@@ -501,7 +631,7 @@ def tree_traversal(roles_tree_node, depth):
 
 
 def main():
-    urwid.MainLoop(top_most, unhandled_input=exit).run()
+    urwid.MainLoop(top_most, unhandled_input=save_or_exit).run()
 
 
 if __name__ == "__main__":
