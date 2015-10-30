@@ -10,7 +10,6 @@ class LSRole(object):
 
         offset = 0
         roles_list = list()
-        roles_tree = LSRole('default')
 
         while offset < len(bin_data):
             role_name_len = bin_data[offset]
@@ -32,7 +31,7 @@ class LSRole(object):
             attr_count = bin_num(bin_data[offset:(offset + 4)], 4)
             offset += (600 - role_name_len - parent_role_name_len - 2)
 
-            role = LSRole(role_name, parent_role_name, attr_count)
+            role = LSRole(role_name, parent_role_name)
 
             for i in range(attr_count):
                 attr_data = bin_data[offset:(offset + 10)]
@@ -58,22 +57,23 @@ class LSRole(object):
 
             roles_list.append(role)
 
+        if len(roles_list) > 0:
+            roles_tree = roles_list[0]
+        else:
+            roles_tree = LSRole('default')
+
         for child in roles_list:
-            if child.parent_role_name == '':
-                roles_tree.child_roles[child.role_name] = child
-                child.parent_role = roles_tree
-            else:
-                for parent in roles_list:
-                    if child.parent_role_name == parent.role_name:
-                        child.parent_role = parent
-                        parent.child_roles[child.role_name] = child
+            for parent in roles_list:
+                if child.parent_role_name == parent.role_name:
+                    child.parent_role = parent
+                    parent.child_roles[child.role_name] = child
+                    break
 
         return roles_tree
 
-    def __init__(self, role_name="", parent_role_name="", attr_count=0):
+    def __init__(self, role_name="", parent_role_name="", parent_role=None):
         self.role_name = role_name
         self.parent_role_name = parent_role_name
-        self.attr_count = attr_count
 
         self.child_roles = dict()
         self.parent_role = None
@@ -98,7 +98,12 @@ class LSRole(object):
             f.write(num_bin(parent_role_name_len, 1))
             f.write(self.parent_role_name.encode('ascii'))
 
-        f.write(num_bin(self.attr_count, 4))
+        attr_count = len(self.file_roles) + \
+            len(self.network_roles) + \
+            len(self.process_roles) + \
+            len(self.bind_processes) + \
+            len(self.bind_users)
+        f.write(num_bin(attr_count, 4))
 
         size = role_name_len + parent_role_name_len + 2 + 4
 
@@ -250,40 +255,28 @@ class LSBindUser(list):
         f.write(b'\xff' * 5)
 
 
-def write_data(roles_tree):
+def write_roles_tree(roles_tree):
 
     with open("./data.sos", "wb") as f:
-        LSRole("test1", "", 5).write(f)
-        LSFileRole(1000001, 7).write(f)
-        LSFileRole(1000001, 7).write(f)
-        LSFileRole(1000001, 7).write(f)
-        LSNetworkRole(8080, True).write(f)
-        LSProcessRole(2000001, LSProcessRole.TYPE_INODE, True, True).write(f)
+        write_role(roles_tree, f)
 
-        LSRole("test2", "test1", 5).write(f)
-        LSFileRole(1000002, 7).write(f)
-        LSNetworkRole(8090, True).write(f)
-        LSNetworkRole(8090, True).write(f)
-        LSNetworkRole(8090, True).write(f)
-        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
 
-        LSRole("test3", "test1", 5).write(f)
-        LSFileRole(1000002, 7).write(f)
-        LSNetworkRole(8090, True).write(f)
-        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
-        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
-        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
+def write_role(role, f):
+    role.write(f)
 
-        LSRole("test4", "test3", 1).write(f)
-        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
+    for attr in role.file_roles:
+        attr.write(f)
+    for attr in role.network_roles:
+        attr.write(f)
+    for attr in role.process_roles:
+        attr.write(f)
+    for attr in role.bind_processes:
+        attr.write(f)
+    for attr in role.bind_users:
+        attr.write(f)
 
-        LSRole("test5", "test3", 1).write(f)
-        LSFileRole(1000002, 7).write(f)
-
-        LSRole("test6", "test2", 3).write(f)
-        LSFileRole(1000002, 7).write(f)
-        LSNetworkRole(8090, True).write(f)
-        LSBindProcess(3000001, LSBindProcess.TYPE_PID).write(f)
+    for key in role.child_roles.keys():
+        write_role(role.child_roles[key], f)
 
 
 def read_data():
@@ -291,13 +284,9 @@ def read_data():
     with open("./data.sos", "rb") as f:
         return LSRole.read_by_bin(bytearray(f.read()))
 
-
-def main():
-
-    write_data()
-
-    roles_tree = read_data()
+f = open("log.txt", "w")
 
 
-if __name__ == '__main__':
-    main()
+def log(text):
+    f.write(str(text) + '\n')
+    f.flush()

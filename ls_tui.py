@@ -1,4 +1,4 @@
-from ls_role import read_data, write_data
+from ls_role import read_data, write_roles_tree
 from ls_role import LSRole
 from ls_role import LSFileRole, LSNetworkRole, LSProcessRole
 from ls_role import LSBindProcess, LSBindUser
@@ -121,10 +121,42 @@ class LSRolesTreeWidget(urwid.TreeWidget):
         if self.is_modifying is True:
             if key == 'enter':
                 self.set_focus_to_icon()
+
+                node = self.get_node()
+                parent_node = node.get_parent()
+                role = node.get_value()
+                parent_role = node.get_parent().get_value()
+                old_role_name = role.role_name
+                new_role_name = self.inner_edit.get_edit_text()
+                log(parent_node.get_value().role_name)
+
+                role.role_name = new_role_name
+                parent_role.child_roles[new_role_name] = \
+                    parent_role.child_roles.pop(old_role_name)
+
+                if old_role_name != new_role_name:
+                    parent_node.change_child_key(old_role_name, new_role_name)
+                # log(parent_role.role_name)
+                # node_traversal(roles_root_node)
+                # tree_traversal(roles_data)
+                # if old_role_name != new_role_name:
+                #     role.role_name = new_role_name
+                #     del parent_role.child_roles[old_role_name]
+                #     log('test2')
+                #     node_traversal(roles_root_node)
+                #     tree_traversal(roles_data)
+                #     parent_role.child_roles[new_role_name] = role
+                #     parent_node.change_child_key(old_role_name, new_role_name)
+                #     for key in role.child_roles.keys():
+                #         role.child_roles[key].parent_role_name = new_role_name
+                # log('testend')
+                # node_traversal(roles_root_node)
+                # tree_traversal(roles_data)
             else:
                 self.inner_edit.keypress(size, key)
         elif key == 'enter':
-            self.set_focus_to_edit()
+            if self.get_node().get_parent() is not None:
+                self.set_focus_to_edit()
         elif key == 'tab':
             if self.expanded is True:
                 self.expanded = False
@@ -230,7 +262,10 @@ class LSRolesTreeListBox(urwid.TreeListBox):
 
         new_role_name = 'new_role' + str(self.create_count)
         self.create_count += 1
-        new_role = LSRole(new_role_name)
+        new_role = LSRole(
+            role_name=new_role_name,
+            parent_role_name=focused_role.role_name,
+            parent_role=focused_role)
         new_node = LSRolesTreeNode(
             value=new_role,
             parent=focused_node,
@@ -371,8 +406,8 @@ class LSAttrsListBox(urwid.ListBox):
 
         key = urwid.ListBox.keypress(self, size, key)
 
-        if key == 'enter':
-            self.set_attr()
+        # if key == 'enter':
+        #     self.set_attr()
 
         return key
 
@@ -401,7 +436,6 @@ class LSAttrsListBox(urwid.ListBox):
 
     def set_attr(self):
         focus = self.get_focus()
-        log(focus)
 
         if focus[1] is not None:
             attr = self.attr_type[focus[1]]
@@ -442,7 +476,7 @@ class LSAttrValuesListBoxIntEdit(urwid.IntEdit):
         if self.modifiable is True:
             if key == 'enter':
                 self.modifiable = False
-                self.int_data[1] = self.get_edit_text()
+                self.int_data[1] = int(self.get_edit_text())
             else:
                 key = urwid.Edit.keypress(self, size, key)
         else:
@@ -545,7 +579,7 @@ def save_or_exit(key):
         log('-----------------exit------------------')
         raise urwid.ExitMainLoop()
     elif key == 's':
-        log('s')
+        write_roles_tree(roles_data)
 
 
 f = open("log.txt", "w")
@@ -596,12 +630,14 @@ footer = urwid.Text("this is footer")
 top_most = urwid.Frame(columns, header=header, footer=footer)
 
 
-def node_traversal(node, depth):
+def node_traversal(node, depth=0):
     text = ""
     for i in range(depth):
         text += "  "
     text += "-"
-    text += str(node.get_value().role_name + ' - ' +
+    text += str(
+        node.get_value().role_name + \
+        ' - ' + \
         str([node._children[n].get_value().role_name for n in node._children]))
     log(text)
 
@@ -617,7 +653,7 @@ def tree_update(node):
         tree_update(node._children[key])
 
 
-def tree_traversal(roles_tree_node, depth):
+def tree_traversal(roles_tree_node, depth=0):
 
     text = ""
     for i in range(depth):
