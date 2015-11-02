@@ -77,6 +77,11 @@ class LSRolesTreeWidgetEdit(urwid.Edit):
 
 class LSRolesTreeWidget(urwid.TreeWidget):
 
+    unexpanded_icon = urwid.AttrMap(urwid.TreeWidget.unexpanded_icon, 
+        'dirmark')
+    expanded_icon = urwid.AttrMap(urwid.TreeWidget.expanded_icon,
+        'dirmark')
+
     def __init__(self, node):
         urwid.TreeWidget.__init__(self, node)
         self.inner_columns = self._wrapped_widget.original_widget
@@ -86,6 +91,9 @@ class LSRolesTreeWidget(urwid.TreeWidget):
             self.is_leaf = True
 
         self.is_modifying = False
+
+        self._w = urwid.AttrWrap(self._w, None)
+        self.update_w()
 
     @property
     def focus(self):
@@ -176,6 +184,10 @@ class LSRolesTreeWidget(urwid.TreeWidget):
         self.is_modifying = False
         self.inner_edit.set_modifiable(False)
         self.inner_columns.set_focus_column(0)
+
+    def update_w(self):
+            self._w.attr = 'body'
+            self._w.focus_attr = 'focus'
 
 
 class LSRolesTreeNode(urwid.ParentNode):
@@ -541,21 +553,23 @@ class LSAttrValuesListBox(urwid.ListBox):
         if attr is not None:
             for i in range(len(attr)):
                 if self.attr.VALUES[i][1] == int:
-                    self.body.append(LSAttrValuesListBoxIntEdit(
+                    edit = LSAttrValuesListBoxIntEdit(
                         str(attr[i][0]) + ' : ',
                         str(attr[i][1]),
-                        int_data=self.attr[i]))
+                        int_data=self.attr[i])
                 else:
-                    self.body.append(LSAttrValuesListBoxBoolEdit(
+                    edit = LSAttrValuesListBoxBoolEdit(
                         str(attr[i][0]) + ' : ',
                         attr.VALUES[i][2][int(self.attr[i][1] ^ True)],
                         bool_data=self.attr[i],
-                        bool_text=self.attr.VALUES[i][2]))
+                        bool_text=self.attr.VALUES[i][2])
+
+                self.body.append(urwid.AttrMap(edit, 'body', 'focus'))
 
     def keypress(self, size, key):
         if self.get_focus()[1] == 0 and key == 'enter':
             self.attr_edit.set_caption(
-                self.attr.VALUES[0][0] + ' : ' + self.body[0].get_edit_text())
+                self.attr.VALUES[0][0] + ' : ' + self.body[0].original_widget.get_edit_text())
 
         return urwid.ListBox.keypress(self, size, key)
 
@@ -616,18 +630,36 @@ roles_tree_box = LSRolesTreeListBox(
     attr_types_list_box)
 
 columns_data = [
-    roles_tree_box,
-    attr_types_list_box,
-    attrs_list_box,
-    attr_values_list_box]
-columns = LSColumns(columns_data)
+    urwid.LineBox(roles_tree_box, 'Roles'),
+    urwid.LineBox(attr_types_list_box, 'Types'),
+    urwid.LineBox(attrs_list_box, 'Attrs'),
+    urwid.LineBox(attr_values_list_box, 'Values')]
+columns = LSColumns(columns_data, 2)
 
 root_widget = roles_root_node.get_widget()
 
 
 header = urwid.Edit("test")
 footer = urwid.Text("this is footer")
-top_most = urwid.Frame(columns, header=header, footer=footer)
+top_most = urwid.AttrMap(
+    urwid.Frame(columns, header=header, footer=footer),
+    'body')
+
+
+palette = [
+        ('body', 'black', 'light gray'),
+        ('flagged', 'black', 'dark green', ('bold','underline')),
+        ('focus', 'light gray', 'dark blue', 'standout'),
+        ('flagged focus', 'yellow', 'dark cyan',
+                ('bold','standout','underline')),
+        ('head', 'yellow', 'black', 'standout'),
+        ('foot', 'light gray', 'black'),
+        ('key', 'light cyan', 'black','underline'),
+        ('title', 'white', 'black', 'bold'),
+        ('dirmark', 'black', 'dark cyan', 'bold'),
+        ('flag', 'dark gray', 'light gray'),
+        ('error', 'dark red', 'light gray'),
+]
 
 
 def node_traversal(node, depth=0):
@@ -667,7 +699,7 @@ def tree_traversal(roles_tree_node, depth=0):
 
 
 def main():
-    urwid.MainLoop(top_most, unhandled_input=save_or_exit).run()
+    urwid.MainLoop(top_most, palette, unhandled_input=save_or_exit).run()
 
 
 if __name__ == "__main__":
