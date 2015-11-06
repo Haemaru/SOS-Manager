@@ -31,7 +31,7 @@ class LSRole(object):
             attr_count = bin_num(bin_data[offset:(offset + 4)], 4)
             offset += (600 - role_name_len - parent_role_name_len - 2)
 
-            role = LSRole(role_name, parent_role_name)
+            role = LSRole(role_name, parent_role_name=parent_role_name)
 
             for i in range(attr_count):
                 attr_data = bin_data[offset:(offset + 10)]
@@ -53,14 +53,14 @@ class LSRole(object):
                     role.bind_users.append(
                         LSBindUser.read_by_bin(attr_data))
                 else:
-                    print("Error")
+                    pass
 
             roles_list.append(role)
 
         if len(roles_list) > 0:
-            roles_tree = roles_list[0]
+            top_role = roles_list[0]
         else:
-            roles_tree = LSRole('default')
+            top_role = LSRole('default')
 
         for child in roles_list:
             for parent in roles_list:
@@ -69,14 +69,14 @@ class LSRole(object):
                     parent.child_roles[child.role_name] = child
                     break
 
-        return roles_tree
+        return top_role
 
-    def __init__(self, role_name="", parent_role_name="", parent_role=None):
+    def __init__(self, role_name='', parent_role=None, parent_role_name=''):
         self.role_name = role_name
         self.parent_role_name = parent_role_name
 
         self.child_roles = dict()
-        self.parent_role = None
+        self.parent_role = parent_role
 
         self.file_roles = list()
         self.network_roles = list()
@@ -87,16 +87,17 @@ class LSRole(object):
 
     def write(self, f):
         role_name_len = len(self.role_name)
-        parent_role_name_len = len(self.parent_role_name)
 
         f.write(num_bin(role_name_len, 1))
         f.write(self.role_name.encode('ascii'))
 
-        if self.parent_role_name == "":
+        if self.parent_role is None:
+            parent_role_name_len = 0
             f.write(b'\x00')
         else:
+            parent_role_name_len = len(self.parent_role.role_name)
             f.write(num_bin(parent_role_name_len, 1))
-            f.write(self.parent_role_name.encode('ascii'))
+            f.write(self.parent_role.role_name.encode('ascii'))
 
         attr_count = len(self.file_roles) + \
             len(self.network_roles) + \
@@ -112,14 +113,14 @@ class LSRole(object):
 
 class LSFileRole(list):
 
-    # key value is VALUES[0]
     VALUES = (
         ('i_ino', int, 8),
         ('u_acc', int, 1))
 
     @staticmethod
     def read_by_bin(bin_data):
-        return LSFileRole(bin_num(bin_data[1:9], 8), bin_data[9])
+        return LSFileRole(
+            bin_num(bin_data[1:9], 8), bin_data[9])
 
     def __init__(self, i_ino=0, u_acc=0):
         self.append(['i_ino', i_ino])
@@ -151,7 +152,7 @@ class LSNetworkRole(list):
         f.write(b'\x02')
         f.write(num_bin(self[0][1], 2))
 
-        if self[1][1]:
+        if self[1][1] is True:
             f.write(num_bin(0, 1))
         else:
             f.write(num_bin(1, 1))
@@ -255,13 +256,14 @@ class LSBindUser(list):
         f.write(b'\xff' * 5)
 
 
-def write_roles_tree(roles_tree):
+def write_data(top_role):
 
     with open("./data.sos", "wb") as f:
-        write_role(roles_tree, f)
+        write_role(top_role, f)
 
 
 def write_role(role, f):
+
     role.write(f)
 
     for attr in role.file_roles:
@@ -283,10 +285,3 @@ def read_data():
 
     with open("./data.sos", "rb") as f:
         return LSRole.read_by_bin(bytearray(f.read()))
-
-f = open("log.txt", "w")
-
-
-def log(text):
-    f.write(str(text) + '\n')
-    f.flush()
