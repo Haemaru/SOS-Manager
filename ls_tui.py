@@ -4,6 +4,7 @@ from ls_role import LSFileRole, LSNetworkRole, LSProcessRole
 from ls_role import LSBindProcess, LSBindUser
 
 import urwid
+import ls_syscall
 
 
 class LSRolesTreeBox(urwid.ListBox):
@@ -626,7 +627,9 @@ def log(text):
 
 
 def main():
+    ls_syscall.ls_login()
     LSLayout()
+    ls_syscall.ls_reload()
 
 
 if __name__ == "__main__":

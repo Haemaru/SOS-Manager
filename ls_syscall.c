@@ -21,3 +21,7 @@ static struct PyMethodDef ls_methods[] = {
     {NULL, NULL}
 };
 
+void initls_syscall()
+{
+	Py_InitModule("ls_syscall", ls_methods);
+}
