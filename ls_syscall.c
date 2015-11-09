@@ -8,7 +8,7 @@ static PyObject* ls_login(PyObject *self, PyObject *args)
     return Py_BuildValue("i", rtn_val);
 }
 
-static PyObjedt* ls_reload(PyObject *self, PyObject *args)
+static PyObject* ls_reload(PyObject *self, PyObject *args)
 {
     rtn_val = syscall(401);
 
