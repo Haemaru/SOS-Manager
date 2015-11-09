@@ -3,12 +3,16 @@
 
 static PyObject* ls_login(PyObject *self, PyObject *args)
 {
-    syscall(402)
+    rtn_val = syscall(402);
+
+    return Py_BuildValue("i", rtn_val);
 }
 
 static PyObjedt* ls_reload(PyObject *self, PyObject *args)
 {
-    syscall(401)
+    rtn_val = syscall(401);
+
+    return Py_BuildValue("i", rtn_val);
 }
 
 static struct PyMethodDef ls_methods[] = {

@@ -1,2 +1,4 @@
 #SOS-Manager
-추후 수정
+- apt-get install python-pip
+- pip install urwid
+- apt-get install python-dev
