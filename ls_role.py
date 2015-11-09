@@ -240,8 +240,8 @@ class LSBindProcess(list):
 
 class LSBindUser(list):
 
-    VALUES = (
-        ('uid', int, 4))
+    VALUES = [
+        ('uid', int, 4)]
 
     @staticmethod
     def read_by_bin(bin_data):

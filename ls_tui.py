@@ -515,6 +515,7 @@ class LSAttrValuesListBox(urwid.ListBox):
                 LSListTextWidget('(need to create attr)'))
         elif widget is not None:
             for i in range(len(widget.attr)):
+                log(widget.attr.VALUES)
                 if widget.attr.VALUES[i][1] == int:
                     edit = LSAttrValuesListBoxIntEdit(
                         str(widget.attr[i][0]) + ' : ',
@@ -616,12 +617,12 @@ class LSLayout(object):
             write_data(self.roles_data)
 
 
-# f = open("log.txt", "w")
+f = open("log.txt", "w")
 
 
-# def log(text):
-#     f.write(str(text) + '\n')
-#     f.flush()
+def log(text):
+    f.write(str(text) + '\n')
+    f.flush()
 
 
 def main():
