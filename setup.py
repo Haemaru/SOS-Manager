@@ -14,5 +14,8 @@ setup(
         'License :: Freeware',
         'Operation System :: POSIX'],
     scripts=['ls_tui'],
+    install_requires=[
+        "urwid==1.3.0",
+    ],
     ext_modules=[Extension('ls_syscall', ['ls_syscall.c'])]
 )
