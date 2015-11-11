@@ -2,8 +2,8 @@ from ls_syscall import ls_login, ls_logout
 
 
 def login(passwd):
-    ls_login(passwd)
+    return ls_login(passwd)
 
 def logout():
-    ls_logout()
+    return ls_logout()
 
