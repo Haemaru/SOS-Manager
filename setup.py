@@ -1,3 +1,5 @@
+import sys
+
 PYPY = hasattr(sys, 'pypy_version_info')
 
 try:
@@ -22,7 +24,7 @@ def install():
             'Development Status :: 2 - Pre-Alpha',
             'License :: Freeware',
             'Operation System :: POSIX'],
-        scripts=['ls_tui'],
+        scripts=['sos'],
         install_requires=[
             "urwid==1.3.0",
         ],

@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+
+import getpass
+import sys
+from argparse import ArgumentParser
+from ls_tui import LSLayout
+from ls_syscall import ls_login, ls_reload, ls_logout
+from user import login, logout
+
+
+__version__ = "0.1.1"
+RED = "\033[0;31m"
+NC='\033[0m' # No Color
+
+parser = ArgumentParser(description="SOS module manager")
+
+parser.add_argument(
+    "mode",
+    metavar="mode",
+    type=str,
+    help="login | logout | reload | manager | encrypt"
+)
+
+args = parser.parse_args()
+
+def main():
+    if args.mode == 'login':
+        passwd = getpass.getpass()
+        ret = login(passwd)
+
+        if ret != 0:
+            sys.stderr.write(RED + "Operation not permitted\n" + NC)
+            sys.exit(-1)
+    elif args.mode == 'logout':
+        logout()
+    elif args.mode == 'reload':
+        ls_logout()
+    elif args.mode == 'manager':
+        passwd = getpass.getpass()
+        ret = login(passwd)
+
+        if ret != 0:
+            sys.stderr.write(RED + "Operation not permitted\n" + NC)
+            sys.exit(-1)
+        LSLayout()
+        ls_logout()
+    elif args.mode == 'encrypt':
+        pass
+    else:
+        args.print_help()
+
+if __name__ == '__main__':
+    main()
+
