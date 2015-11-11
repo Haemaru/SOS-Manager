@@ -1,3 +1,4 @@
+from os.path import isfile
 from utils import num_bin
 from utils import bin_num
 from utils import is_bit_flagged
@@ -282,6 +283,9 @@ def write_role(role, f):
 
 
 def read_data():
+    if not isfile("/etc/data.sos"):
+        return LSRole.read_by_bin(bytearray())
 
     with open("/etc/data.sos", "rb") as f:
         return LSRole.read_by_bin(bytearray(f.read()))
+
