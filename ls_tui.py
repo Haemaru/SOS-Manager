@@ -2,9 +2,10 @@ from ls_role import read_data, write_data
 from ls_role import LSRole
 from ls_role import LSFileRole, LSNetworkRole, LSProcessRole
 from ls_role import LSBindProcess, LSBindUser
+from browse import DirectoryBrowser
 
 import urwid
-import ls_syscall
+import os
 
 
 class LSRolesTreeBox(urwid.ListBox):
@@ -438,35 +439,39 @@ class LSAttrsListBox(urwid.ListBox):
         self.attr_values_list.update_list()
 
 
-class LSAttrValuesListBoxIntEdit(urwid.IntEdit):
+class LSAttrValuesListBoxIntWidget(urwid.AttrMap):
 
-    def __init__(
-        self,
-        caption='',
-        default=None,
-        int_data=None
-    ):
-        urwid.Edit.__init__(
+    NORMAL = 'normal'
+    FOCUSED = 'focused'
+    SELECTED = 'selected'
+
+    def __init__(self, attr_type, attr):
+        self.attr_type = attr_type
+        self.attr = attr
+
+        self.edit = urwid.IntEdit(
+            ' ' + str(attr[0]) + ' : ',
+            str(attr[1]))
+
+        urwid.AttrMap.__init__(
             self,
-            ' ' + caption,
-            default)
-        self.int_data = int_data
-        self.modifiable = False
+            self.edit,
+            self.NORMAL,
+            self.FOCUSED)
 
-    def selectable(self):
-        return True
+        self.modifiable = False
 
     def set_modifiable(self, modifiable):
         self.modifiable = modifiable
 
     def keypress(self, size, key):
         if self.modifiable is True:
-            if key == 'enter':
+            if key == 'enter' and self.edit.get_edit_text() != '':
                 self.modifiable = False
-                self.int_data[1] = int(self.get_edit_text())
+                self.attr[1] = int(self.edit.get_edit_text())
                 return key
             else:
-                key = urwid.Edit.keypress(self, size, key)
+                key = self.edit.keypress(size, key)
         else:
             if key == 'enter':
                 self.modifiable = True
@@ -474,62 +479,129 @@ class LSAttrValuesListBoxIntEdit(urwid.IntEdit):
             return key
 
 
-class LSAttrValuesListBoxBoolEdit(urwid.Edit):
+class LSAttrValuesListBoxBoolWidget(urwid.AttrMap):
 
-    def __init__(
-        self,
-        caption='',
-        edit_text='',
-        bool_data=None,
-        bool_text=None
-    ):
-        urwid.Edit.__init__(
+    NORMAL = 'normal'
+    FOCUSED = 'focused'
+    SELECTED = 'selected'
+
+    def __init__(self, attr_type, attr):
+        self.attr_type = attr_type
+        self.attr = attr
+
+        self.edit = urwid.Edit(
+            ' ' + str(attr[0]) + ' : ',
+            attr_type[2][int(attr[1])])
+
+        urwid.AttrMap.__init__(
             self,
-            ' ' + caption,
-            edit_text)
-        self.bool_data = bool_data
-        self.bool_text = bool_text
-
-    def selectable(self):
-        return True
+            self.edit,
+            self.NORMAL,
+            self.FOCUSED)
 
     def keypress(self, size, key):
         if key == 'enter':
-            self.bool_data[1] = bool(self.bool_data[1] ^ True)
-            self.set_edit_text(self.bool_text[int(self.bool_data[1] ^ True)])
+            self.attr[1] = bool(self.attr[1] ^ True)
+            self.edit.set_edit_text(self.attr_type[2][int(self.attr[1])])
+
+        return key
+
+
+class LSAttrValuesListBoxInodeWidget(urwid.AttrMap):
+
+    NORMAL = 'normal'
+    FOCUSED = 'focused'
+    SELECTED = 'selected'
+
+    def __init__(self, attr_type, attr):
+        self.attr_type = attr_type
+        self.attr = attr
+
+        self.edit = urwid.Edit(
+            ' ' + str(attr[0]) + ' : ',
+            str(attr[1]))
+
+        urwid.AttrMap.__init__(
+            self,
+            self.edit,
+            self.NORMAL,
+            self.FOCUSED)
+
+    def keypress(self, size, key):
+        if key == 'enter':
+            LSLayout.frame.set_body(LSLayout.frame_body_browser)
+
+        return key
+
+
+class LSAttrValuesListBoxIdtypeWidget(LSAttrValuesListBoxBoolWidget):
+    def keypress(self, size, key):
+        if key == 'enter':
+            self.attr[1] = bool(self.attr[1] ^ True)
+
+            id_type = self.attr_type[2][int(self.attr[1])]
+            self.edit.set_edit_text(id_type)
+
+            if id_type == 'inode':
+                widget_type = LSAttrValuesListBoxInodeWidget
+            elif id_type == 'pid':
+                widget_type = LSAttrValuesListBoxIntWidget
+
+            LSAttrsListBox.focused_widget.attr[0][1] = 0
+            widget = widget_type(
+                LSAttrsListBox.focused_widget.attr.VALUES[0],
+                LSAttrsListBox.focused_widget.attr[0])
+            LSAttrValuesListBox.widget_list[0] = widget
+            LSAttrValuesListBox.represent_widget = widget
+            LSAttrsListBox.focused_widget.update_widget()
 
         return key
 
 
 class LSAttrValuesListBox(urwid.ListBox):
 
+    represent_widget = None
+    widget_list = None
+
     def __init__(self):
         urwid.ListBox.__init__(self, urwid.SimpleFocusListWalker([]))
+        LSAttrValuesListBox.widget_list = self.body
 
     def update_list(self):
-        widget = LSAttrsListBox.focused_widget
+        attr_widget = LSAttrsListBox.focused_widget
 
         del self.body[:]
 
         if len(LSAttrTypesListBox.focused_attrs) == 0:
             self.body.append(
                 LSListTextWidget('(need to create attr)'))
-        elif widget is not None:
-            for i in range(len(widget.attr)):
-                log(widget.attr.VALUES)
-                if widget.attr.VALUES[i][1] == int:
-                    edit = LSAttrValuesListBoxIntEdit(
-                        str(widget.attr[i][0]) + ' : ',
-                        str(widget.attr[i][1]),
-                        int_data=widget.attr[i])
-                else:
-                    edit = LSAttrValuesListBoxBoolEdit(
-                        str(widget.attr[i][0]) + ' : ',
-                        widget.attr.VALUES[i][2][int(widget.attr[i][1] ^ 1)],
-                        bool_data=widget.attr[i],
-                        bool_text=widget.attr.VALUES[i][2])
+        elif attr_widget is not None:
+            for i in range(len(attr_widget.attr)):
+                values = attr_widget.attr.VALUES[i]
 
-                self.body.append(urwid.AttrMap(edit, 'normal', 'focused'))
+                if values[0] == 'i_ino' or values[0] == 'id_value' and \
+                        not attr_widget.attr[1][1]:
+                    value_widget = LSAttrValuesListBoxInodeWidget
+                elif values[0] == 'id_type':
+                    value_widget = LSAttrValuesListBoxIdtypeWidget
+                elif values[1] == int:
+                    value_widget = LSAttrValuesListBoxIntWidget
+                elif values[1] == bool:
+                    value_widget = LSAttrValuesListBoxBoolWidget
+
+                self.body.append(value_widget(values, attr_widget.attr[i]))
+
+        LSAttrValuesListBox.represent_widget = self.body[0]
+
+    def update_represent_widget(self, attr_type):
+        if attr_type == 'inode':
+            widget = LSAttrValuesListBoxInodeWidget
+        elif attr_type == 'pid':
+            widget = LSAttrValuesListBoxIdtypeWidget
+
+        self.body[0] = widget(
+            LSAttrsListBox.focused_widget.attr.VALUES[0],
+            LSAttrsListBox.focused_widget.attr[0])
 
     def keypress(self, size, key):
         key = urwid.ListBox.keypress(self, size, key)
@@ -564,11 +636,42 @@ class LSListLineBox(urwid.AttrMap):
         return True
 
 
+class LSBrowser(urwid.Padding):
+
+    def __init__(self):
+        self.browser = DirectoryBrowser()
+        urwid.Padding.__init__(
+            self,
+            urwid.LineBox(urwid.Padding(
+                self.browser, left=1, right=1), 'File Browser'),
+            left=1,
+            right=2)
+
+    def keypress(self, size, key):
+        key = urwid.Padding.keypress(self, size, key)
+
+        if key == 'enter':
+            path = self.browser.listbox.get_focus()[1].get_value()
+            inode = os.stat(path).st_ino
+
+            LSAttrValuesListBox.represent_widget.attr[1] = inode
+            LSAttrValuesListBox.represent_widget.edit.set_edit_text(str(inode))
+            LSAttrsListBox.focused_widget.update_widget()
+
+            LSLayout.frame.set_body(LSLayout.frame_body_columns)
+
+        return key
+
+
 class LSLayout(object):
 
-    layout_header = None
-    layout_body = None
-    layout_footer = None
+    frame = None
+    frame_header = None
+    frame_body_columns = None
+    frame_body_browser = None
+    frame_footer = None
+
+    loop = None
 
     def __init__(self):
         self.palette = [
@@ -576,6 +679,18 @@ class LSLayout(object):
             ('focused', 'light gray', 'dark blue',),
             ('selected', 'light gray', 'dark gray'),
             ('mark', 'black', 'dark cyan', 'bold'),
+            ('body', 'black', 'light gray'),
+            ('flagged', 'black', 'dark green', ('bold','underline')),
+            ('focus', 'light gray', 'dark blue', 'standout'),
+            ('flagged focus', 'yellow', 'dark cyan',
+                    ('bold','standout','underline')),
+            ('head', 'yellow', 'black', 'standout'),
+            ('foot', 'light gray', 'black'),
+            ('key', 'light cyan', 'black','underline'),
+            ('title', 'white', 'black', 'bold'),
+            ('dirmark', 'black', 'dark cyan', 'bold'),
+            ('flag', 'dark gray', 'light gray'),
+            ('error', 'dark red', 'light gray'),
         ]
 
         self.roles_data = read_data()
@@ -584,32 +699,35 @@ class LSLayout(object):
         self.attr_types = LSAttrTypesListBox(self.attrs)
         self.roles = LSRolesTreeBox(self.roles_data, self.attr_types)
 
-        LSLayout.layout_body = urwid.Padding(
-            urwid.Columns(
-                [
-                    LSListLineBox(self.roles, 'Roles'),
-                    ('fixed', 20, LSListLineBox(self.attr_types, 'Types')),
-                    ('fixed', 30, LSListLineBox(self.attrs, 'Attrs')),
-                    ('fixed', 30, LSListLineBox(self.attr_values, 'Values')),
-                ], 2), left=1, right=2
+        LSLayout.frame_body_columns = urwid.Padding(
+            urwid.Columns([
+                LSListLineBox(self.roles, 'Roles'),
+                ('fixed', 20, LSListLineBox(self.attr_types, 'Types')),
+                ('fixed', 30, LSListLineBox(self.attrs, 'Attrs')),
+                ('fixed', 30, LSListLineBox(self.attr_values, 'Values')),
+            ], 2), left=1, right=2
         )
+        LSLayout.frame_body_browser = LSBrowser()
 
-        LSLayout.layout_header = urwid.Padding(
+        LSLayout.frame_header = urwid.Padding(
             urwid.LineBox(urwid.Text(' SOS-Manager')), left=1, right=2)
-        LSLayout.layout_footer = urwid.Padding(
+        LSLayout.frame_footer = urwid.Padding(
             urwid.LineBox(urwid.Text(
                 ' Help - Create : c, Delete : d, ' +
                 'Rename/Modify : enter, Save : s, Quit : q')
             ), left=1, right=2)
 
-        urwid.MainLoop(urwid.AttrMap(
-            urwid.Frame(
-                LSLayout.layout_body,
-                header=LSLayout.layout_header,
-                footer=LSLayout.layout_footer
-            ), 'normal'),
+        LSLayout.frame = urwid.Frame(
+            LSLayout.frame_body_columns,
+            header=LSLayout.frame_header,
+            footer=LSLayout.frame_footer
+        )
+
+        LSLayout.loop = urwid.MainLoop(
+            urwid.AttrMap(self.frame, 'normal'),
             self.palette,
-            unhandled_input=self.save_or_exit,).run()
+            unhandled_input=self.save_or_exit,)
+        LSLayout.loop.run()
 
     def save_or_exit(self, key):
         if key in ('q', 'Q'):
@@ -627,9 +745,7 @@ def log(text):
 
 
 def main():
-    ls_syscall.ls_login()
     LSLayout()
-    ls_syscall.ls_reload()
 
 
 if __name__ == "__main__":
