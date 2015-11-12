@@ -259,7 +259,7 @@ class LSBindUser(list):
 
 def write_data(top_role):
 
-    with open("./data.sos", "wb") as f:
+    with open("/etc/data.sos", "wb") as f:
         write_role(top_role, f)
 
 
@@ -284,5 +284,5 @@ def write_role(role, f):
 
 def read_data():
 
-    with open("./data.sos", "rb") as f:
+    with open("/etc/data.sos", "rb") as f:
         return LSRole.read_by_bin(bytearray(f.read()))

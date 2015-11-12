@@ -3,14 +3,14 @@
 
 static PyObject* ls_login(PyObject *self, PyObject *args)
 {
-    rtn_val = syscall(402);
+    int rtn_val = syscall(402);
 
     return Py_BuildValue("i", rtn_val);
 }
 
 static PyObject* ls_reload(PyObject *self, PyObject *args)
 {
-    rtn_val = syscall(401);
+    int rtn_val = syscall(401);
 
     return Py_BuildValue("i", rtn_val);
 }
