@@ -3,6 +3,7 @@
 import getpass
 import os
 import sys
+import hashlib
 from os.path import isdir
 from argparse import ArgumentParser
 from ls_tui import LSLayout
@@ -12,7 +13,7 @@ from user import login, logout
 
 __version__ = "0.1.1"
 RED = "\033[0;31m"
-NC='\033[0m' # No Color
+NC = '\033[0m' # No Color
 
 parser = ArgumentParser(description="SOS module manager")
 
@@ -35,10 +36,11 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
 def main():
     if args.mode == 'login':
         passwd = getpass.getpass()
-        ret = login(passwd)
+        ret = login(hashlib.sha1(passwd).digest())
 
         if ret != 0:
             sys.stderr.write(RED + "Operation not permitted\n" + NC)
@@ -49,7 +51,7 @@ def main():
         ls_logout()
     elif args.mode == 'manager':
         passwd = getpass.getpass()
-        ret = login(passwd)
+        ret = login(hashlib.sha1(passwd).digest())
 
         if ret != 0:
             sys.stderr.write(RED + "Operation not permitted\n" + NC)
@@ -88,7 +90,16 @@ def main():
             sys.stderr.write(RED + "sos ecrypt [SRC_DIR]\n" + NC)
             sys.exit(-1)
     elif args.mode == 'passwd':
-        pass
+        passwd = getpass.getpass()
+        hash_passwd = hashlib.sha1(passwd).digest()
+
+        f = open('/etc/data.sos', 'rb')
+        data = bytearray(f.read())
+        f.close()
+
+        f = open('/etc/data.sos', 'wb')
+        f.write(hash_passwd + data[20:])
+        f.close()
     else:
         args.print_help()
 
