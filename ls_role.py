@@ -121,7 +121,8 @@ class LSFileRole(list):
     @staticmethod
     def read_by_bin(bin_data):
         return LSFileRole(
-            bin_num(bin_data[1:9], 8), bin_data[9])
+            bin_num(bin_data[1:9], 8),
+            bin_data[9])
 
     def __init__(self, i_ino=0, u_acc=0):
         self.append(['i_ino', i_ino])
@@ -137,7 +138,7 @@ class LSNetworkRole(list):
 
     VALUES = (
         ('port', int, 2),
-        ('is_allow_open', bool, ('true', 'false')))
+        ('is_allow_open', bool, ('false', 'true')))
 
     @staticmethod
     def read_by_bin(bin_data):
@@ -165,12 +166,12 @@ class LSProcessRole(list):
 
     VALUES = (
         ('id_value', int, 8),
-        ('id_type', bool, ('pid', 'inode')),
-        ('is_allow_kill', bool, ('true', 'false')),
-        ('is_allow_trace', bool, ('true', 'false')))
+        ('id_type', bool, ('inode', 'pid')),
+        ('is_allow_kill', bool, ('false', 'true')),
+        ('is_allow_trace', bool, ('false', 'true')))
 
-    TYPE_PID = 0
-    TYPE_INODE = 1
+    TYPE_PID = 1
+    TYPE_INODE = 0
 
     @staticmethod
     def read_by_bin(bin_data):
@@ -212,10 +213,10 @@ class LSBindProcess(list):
 
     VALUES = (
         ('id_value', int, 8),
-        ('id_type', bool, ('pid', 'inode')))
+        ('id_type', bool, ('inode', 'pid')))
 
-    TYPE_PID = 0
-    TYPE_INODE = 1
+    TYPE_PID = 1
+    TYPE_INODE = 0
 
     @staticmethod
     def read_by_bin(bin_data):
