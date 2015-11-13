@@ -450,7 +450,7 @@ class LSAttrValuesListBoxIntWidget(urwid.AttrMap):
         self.attr = attr
 
         self.edit = urwid.IntEdit(
-            ' ' + str(attr[0]) + ' : ',
+            ' ' + str(attr_type[0]) + ' : ',
             str(attr[1]))
 
         urwid.AttrMap.__init__(
@@ -490,7 +490,7 @@ class LSAttrValuesListBoxBoolWidget(urwid.AttrMap):
         self.attr = attr
 
         self.edit = urwid.Edit(
-            ' ' + str(attr[0]) + ' : ',
+            ' ' + str(attr_type[0]) + ' : ',
             attr_type[2][int(attr[1])])
 
         urwid.AttrMap.__init__(
@@ -518,7 +518,7 @@ class LSAttrValuesListBoxInodeWidget(urwid.AttrMap):
         self.attr = attr
 
         self.edit = urwid.Edit(
-            ' ' + str(attr[0]) + ' : ',
+            ' ' + str(attr_type[0]) + ' : ',
             str(attr[1]))
 
         urwid.AttrMap.__init__(
@@ -542,9 +542,9 @@ class LSAttrValuesListBoxIdtypeWidget(LSAttrValuesListBoxBoolWidget):
             id_type = self.attr_type[2][int(self.attr[1])]
             self.edit.set_edit_text(id_type)
 
-            if id_type == 'inode':
+            if id_type == 'INODE':
                 widget_type = LSAttrValuesListBoxInodeWidget
-            elif id_type == 'pid':
+            elif id_type == 'UID':
                 widget_type = LSAttrValuesListBoxIntWidget
 
             LSAttrsListBox.focused_widget.attr[0][1] = 0
@@ -579,10 +579,10 @@ class LSAttrValuesListBox(urwid.ListBox):
             for i in range(len(attr_widget.attr)):
                 values = attr_widget.attr.VALUES[i]
 
-                if values[0] == 'i_ino' or values[0] == 'id_value' and \
+                if values[0] == 'INODE Number' or values[0] == 'ID' and \
                         not attr_widget.attr[1][1]:
                     value_widget = LSAttrValuesListBoxInodeWidget
-                elif values[0] == 'id_type':
+                elif values[0] == 'ID Type':
                     value_widget = LSAttrValuesListBoxIdtypeWidget
                 elif values[1] == int:
                     value_widget = LSAttrValuesListBoxIntWidget
@@ -596,7 +596,7 @@ class LSAttrValuesListBox(urwid.ListBox):
     def update_represent_widget(self, attr_type):
         if attr_type == 'inode':
             widget = LSAttrValuesListBoxInodeWidget
-        elif attr_type == 'pid':
+        elif attr_type == 'uid':
             widget = LSAttrValuesListBoxIdtypeWidget
 
         self.body[0] = widget(
@@ -701,8 +701,8 @@ class LSLayout(object):
 
         LSLayout.frame_body_columns = urwid.Padding(
             urwid.Columns([
-                LSListLineBox(self.roles, 'Roles'),
-                ('fixed', 20, LSListLineBox(self.attr_types, 'Types')),
+                ('fixed', 30, LSListLineBox(self.roles, 'Roles')),
+                ('fixed', 30, LSListLineBox(self.attr_types, 'Types')),
                 ('fixed', 30, LSListLineBox(self.attrs, 'Attrs')),
                 ('fixed', 30, LSListLineBox(self.attr_values, 'Values')),
             ], 2), left=1, right=2

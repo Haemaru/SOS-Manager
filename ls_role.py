@@ -9,7 +9,7 @@ class LSRole(object):
     @staticmethod
     def read_by_bin(bin_data):
 
-        offset = 0
+        offset = 20
         roles_list = list()
 
         while offset < len(bin_data):
@@ -115,30 +115,52 @@ class LSRole(object):
 class LSFileRole(list):
 
     VALUES = (
-        ('i_ino', int, 8),
-        ('u_acc', int, 1))
+        ('INODE Number', int, 8),
+        ('Read', bool, ('DENY', 'ALLOW')),
+        ('Write', bool, ('DENY', 'ALLOW')),
+        ('Execute', bool, ('DENY', 'ALLOW')))
 
     @staticmethod
     def read_by_bin(bin_data):
         return LSFileRole(
             bin_num(bin_data[1:9], 8),
-            bin_data[9])
+            is_bit_flagged(bin_data[9], 0b100) ^ 1,
+            is_bit_flagged(bin_data[9], 0b010) ^ 1,
+            is_bit_flagged(bin_data[9], 0b001) ^ 1)
 
-    def __init__(self, i_ino=0, u_acc=0):
-        self.append(['i_ino', i_ino])
-        self.append(['u_acc', u_acc])
+    def __init__(
+        self,
+        i_ino=0,
+        u_acc_read=True,
+        u_acc_write=True,
+        u_acc_execute=True
+    ):
+        self.append(['INODE Number', i_ino])
+        self.append(['u_acc_read', u_acc_read])
+        self.append(['u_acc_write', u_acc_write])
+        self.append(['u_acc_execute', u_acc_write])
 
     def write(self, f):
         f.write(b'\x01')
+
+        u_acc = 0
+
+        if self[1][1] is True:
+            u_acc |= 0b100
+        if self[2][1] is True:
+            u_acc |= 0b010
+        if self[3][1] is True:
+            u_acc |= 0b001
+
         f.write(num_bin(self[0][1], 8))
-        f.write(num_bin(self[1][1], 1))
+        f.write(num_bin(u_acc, 1))
 
 
 class LSNetworkRole(list):
 
     VALUES = (
-        ('port', int, 2),
-        ('is_allow_open', bool, ('false', 'true')))
+        ('Port', int, 2),
+        ('Open', bool, ('DENY', 'ALLOW')))
 
     @staticmethod
     def read_by_bin(bin_data):
@@ -147,7 +169,7 @@ class LSNetworkRole(list):
             is_bit_flagged(bin_data[3], 0b001))
 
     def __init__(self, port=0, is_allow_open=True):
-        self.append(['port', port])
+        self.append(['Port', port])
         self.append(['is_allow_open', is_allow_open])
 
     def write(self, f):
@@ -165,10 +187,11 @@ class LSNetworkRole(list):
 class LSProcessRole(list):
 
     VALUES = (
-        ('id_value', int, 8),
-        ('id_type', bool, ('inode', 'pid')),
-        ('is_allow_kill', bool, ('false', 'true')),
-        ('is_allow_trace', bool, ('false', 'true')))
+        ('ID', int, 8),
+        ('ID Type', bool, ('INODE', 'UID')),
+        ('Kill', bool, ('DENY', 'ALLOW')),
+        ('Trace', bool, ('DENY', 'ALLOW')),
+        ('Setuid', bool, ('DENY', 'ALLOW')))
 
     TYPE_PID = 1
     TYPE_INODE = 0
@@ -177,21 +200,24 @@ class LSProcessRole(list):
     def read_by_bin(bin_data):
         return LSProcessRole(
             bin_num(bin_data[1:9], 8),
-            is_bit_flagged(bin_data[9], 0b100),
-            is_bit_flagged(bin_data[9], 0b010),
-            is_bit_flagged(bin_data[9], 0b001))
+            is_bit_flagged(bin_data[9], 0b1000),
+            is_bit_flagged(bin_data[9], 0b0100),
+            is_bit_flagged(bin_data[9], 0b0010),
+            is_bit_flagged(bin_data[9], 0b0001))
 
     def __init__(
         self,
         id_value=0,
         id_type=TYPE_PID,
         is_allow_kill=True,
-        is_allow_trace=True
+        is_allow_trace=True,
+        is_allow_setuid=True
     ):
-        self.append(['id_value', id_value])
+        self.append(['ID', id_value])
         self.append(['id_type', id_type])
         self.append(['is_allow_kill', is_allow_kill])
         self.append(['is_allow_trace', is_allow_trace])
+        self.append(['is_allow_setuid', is_allow_setuid])
 
     def write(self, f):
         f.write(b'\x03')
@@ -199,11 +225,13 @@ class LSProcessRole(list):
         flag = 0
 
         if self[1][1] == LSProcessRole.TYPE_INODE:
-            flag |= 0b100
+            flag |= 0b1000
         if self[2][1] is False:
-            flag |= 0b010
+            flag |= 0b0100
         if self[3][1] is False:
-            flag |= 0b001
+            flag |= 0b0010
+        if self[4][1] is False:
+            flag |= 0b0001
 
         f.write(num_bin(self[0][1], 8))
         f.write(num_bin(flag, 1))
@@ -212,8 +240,8 @@ class LSProcessRole(list):
 class LSBindProcess(list):
 
     VALUES = (
-        ('id_value', int, 8),
-        ('id_type', bool, ('inode', 'pid')))
+        ('ID', int, 8),
+        ('ID Type', bool, ('INODE', 'UID')))
 
     TYPE_PID = 1
     TYPE_INODE = 0
@@ -225,7 +253,7 @@ class LSBindProcess(list):
             is_bit_flagged(bin_data[9], 0b001))
 
     def __init__(self, id_value=0, id_type=TYPE_PID):
-        self.append(['id_value', id_value])
+        self.append(['ID', id_value])
         self.append(['id_type', id_type])
 
     def write(self, f):
@@ -243,14 +271,14 @@ class LSBindProcess(list):
 class LSBindUser(list):
 
     VALUES = [
-        ('uid', int, 4)]
+        ('UID', int, 4)]
 
     @staticmethod
     def read_by_bin(bin_data):
         return LSBindUser(bin_num(bin_data[1:5], 4))
 
     def __init__(self, uid=0):
-        self.append(['uid', uid])
+        self.append(['UID', uid])
 
     def write(self, f):
         f.write(b'\xff')
