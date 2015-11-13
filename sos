@@ -7,13 +7,13 @@ import hashlib
 from os.path import isdir
 from argparse import ArgumentParser
 from ls_tui import LSLayout
-from ls_syscall import ls_login, ls_reload, ls_logout
+from ls_syscall import ls_reload, ls_logout
 from user import login, logout
 
 
 __version__ = "0.1.1"
 RED = "\033[0;31m"
-NC = '\033[0m' # No Color
+NC = '\033[0m'  # No Color
 
 parser = ArgumentParser(description="SOS module manager")
 
@@ -48,7 +48,7 @@ def main():
     elif args.mode == 'logout':
         logout()
     elif args.mode == 'reload':
-        ls_logout()
+        ls_reload()
     elif args.mode == 'manager':
         passwd = getpass.getpass()
         ret = login(hashlib.sha1(passwd).digest())
@@ -99,11 +99,15 @@ def main():
         f.close()
 
         f = open('/etc/data.sos', 'wb')
-        f.write(hash_passwd + data[20:])
+        if len(data) > 20:
+            f.write(hash_passwd + data[20:])
+        else:
+            f.write(hash_passwd)
         f.close()
+
+        ls_reload()
     else:
         args.print_help()
 
 if __name__ == '__main__':
     main()
-

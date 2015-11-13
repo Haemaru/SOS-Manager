@@ -6,9 +6,12 @@ from utils import is_bit_flagged
 
 class LSRole(object):
 
+    PASSWORD = bytearray(20)
+
     @staticmethod
     def read_by_bin(bin_data):
 
+        LSRole.PASSWORD = bin_data[:20]
         offset = 20
         roles_list = list()
 
@@ -289,6 +292,7 @@ class LSBindUser(list):
 def write_data(top_role):
 
     with open("/etc/data.sos", "wb") as f:
+        f.write(LSRole.PASSWORD)
         write_role(top_role, f)
 
 
