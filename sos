@@ -63,7 +63,7 @@ def main():
         if not len(args.options) == 0:
             target = args.options
             if isdir(target):
-                passwd = getpass.getpass("Encryption password :")
+                passwd = getpass.getpass("Encryption password: ")
                 os.system(
                     "keyctl new_session && mount -t  ecryptfs "
                     + target + " "
@@ -92,7 +92,14 @@ def main():
             sys.stderr.write(RED + "sos ecrypt [SRC_DIR]\n" + NC)
             sys.exit(-1)
     elif args.mode == 'passwd':
-        passwd = getpass.getpass()
+        passwd = getpass.getpass("Old Password: ")
+        ret = login(hashlib.sha1(passwd).digest())
+     
+        if ret != 0:
+            sys.stderr.write(RED + "Operation not permitted\n" + NC)
+            sys.exit(-1)
+
+	passwd = getpass.getpass("New Password: ")
         hash_passwd = hashlib.sha1(passwd).digest()
 
         f = open('/etc/data.sos', 'rb')
