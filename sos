@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 
 import getpass
-<<<<<<< HEAD
 import os
 import sys
 from os.path import isdir
-=======
-import sys
->>>>>>> luavis
 from argparse import ArgumentParser
 from ls_tui import LSLayout
 from ls_syscall import ls_login, ls_reload, ls_logout
@@ -24,13 +20,15 @@ parser.add_argument(
     "mode",
     metavar="mode",
     type=str,
-    help="login | logout | reload | manager | unlock | lock | passwd"
+    help="login | logout | reload | manager | encrypt | unlock | lock | passwd"
 )
 
 parser.add_argument(
-    "options",
-    metavar="[ options ]",
+    "--options",
+    metavar="options",
     type=str,
+    default="",
+    required=False,
     help="options depned on mode"
 )
 
@@ -58,9 +56,9 @@ def main():
             sys.exit(-1)
         LSLayout()
         ls_logout()
-    elif args.mode == 'unlock':
-        if len(sys.argv) == 3:
-            target = sys.argv[2]
+    elif args.mode == 'encrypt' or args.mode == 'unlock':
+        if not len(args.options) == 0:
+            target = args.options
             if isdir(target):
                 passwd = getpass.getpass("Encryption password :")
                 os.system("keyctl new_session && mount -t  ecryptfs "
@@ -79,8 +77,8 @@ def main():
             sys.stderr.write(RED + "sos ecrypt [SRC_DIR]\n" + NC)
             sys.exit(-1)
     elif args.mode == 'lock':
-        if len(sys.argv) == 3:
-            target = sys.argv[2]
+        if not len(args.options) == 0:
+            target = args.options
             if isdir(target):
                 os.system("umount " + target)
             else:
