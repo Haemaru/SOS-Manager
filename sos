@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+
+import getpass
+import os
+import sys
+from os.path import isdir
+from argparse import ArgumentParser
+from ls_tui import LSLayout
+from ls_syscall import ls_login, ls_reload, ls_logout
+from user import login, logout
+
+
+__version__ = "0.1.1"
+RED = "\033[0;31m"
+NC='\033[0m' # No Color
+
+parser = ArgumentParser(description="SOS module manager")
+
+parser.add_argument(
+    "mode",
+    metavar="mode",
+    type=str,
+    help="login | logout | reload | manager | unlock | lock | passwd"
+)
+
+parser.add_argument(
+    "options",
+    metavar="[ options ]",
+    type=str,
+    help="options depned on mode"
+)
+
+
+args = parser.parse_args()
+
+def main():
+    if args.mode == 'login':
+        passwd = getpass.getpass()
+        ret = login(passwd)
+
+        if ret != 0:
+            sys.stderr.write(RED + "Operation not permitted\n" + NC)
+            sys.exit(-1)
+    elif args.mode == 'logout':
+        logout()
+    elif args.mode == 'reload':
+        ls_logout()
+    elif args.mode == 'manager':
+        passwd = getpass.getpass()
+        ret = login(passwd)
+
+        if ret != 0:
+            sys.stderr.write(RED + "Operation not permitted\n" + NC)
+            sys.exit(-1)
+        LSLayout()
+        ls_logout()
+    elif args.mode == 'unlock':
+        if len(sys.argv) == 3:
+            target = sys.argv[2]
+            if isdir(target):
+                passwd = getpass.getpass("Encryption password :")
+                os.system("keyctl new_session && mount -t  ecryptfs "
+                    + target + " "
+                    + target
+                    + " -o key=passphrase:passphrase_passwd=" + passwd
+                    + " -o ecryptfs_enable_filename_crypto=n"
+                    + " -o ecryptfs_cipher=aes"
+                    + " -o ecryptfs_key_bytes=24"
+                    + " -o ecryptfs_passthrough"
+                )
+            else:
+                sys.stderr.write(RED + "SRC_DIR is not directory\n" + NC)
+                sys.exit(-1)
+        else:
+            sys.stderr.write(RED + "sos ecrypt [SRC_DIR]\n" + NC)
+            sys.exit(-1)
+    elif args.mode == 'lock':
+        if len(sys.argv) == 3:
+            target = sys.argv[2]
+            if isdir(target):
+                os.system("umount " + target)
+            else:
+                sys.stderr.write(RED + "SRC_DIR is not directory\n" + NC)
+                sys.exit(-1)
+        else:
+            sys.stderr.write(RED + "sos ecrypt [SRC_DIR]\n" + NC)
+            sys.exit(-1)
+    elif args.mode == 'passwd':
+        pass
+    else:
+        args.print_help()
+
+if __name__ == '__main__':
+    main()
+
