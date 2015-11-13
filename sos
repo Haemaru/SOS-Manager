@@ -63,7 +63,8 @@ def main():
             target = args.options
             if isdir(target):
                 passwd = getpass.getpass("Encryption password :")
-                os.system("keyctl new_session && mount -t  ecryptfs "
+                os.system(
+                    "keyctl new_session && mount -t  ecryptfs "
                     + target + " "
                     + target
                     + " -o key=passphrase:passphrase_passwd=" + passwd

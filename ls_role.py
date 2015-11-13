@@ -317,4 +317,3 @@ def read_data():
 
     with open("/etc/data.sos", "rb") as f:
         return LSRole.read_by_bin(bytearray(f.read()))
-
