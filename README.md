@@ -3,7 +3,7 @@ SOS-Manager
 
 This project is role and password manager of [SOS](https://github.com/Luavis/SOS) which is security module in linux.
 
-### dependency
+### Dependency
 
 1. python-dev: install it by apt-get or yum
 2. [SOS](https://github.com/Luavis/SOS) module
