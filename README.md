@@ -18,7 +18,7 @@ This project is role and password manager of [SOS](https://github.com/Luavis/SOS
 ### How to use
 
 ```
-Usage: sos [-h] mode options
+Usage: sos_manager [-h] mode options
 
 positional arguments:
   mode:     login | logout | reload | manager | encrypt | unlock | lock | passwd

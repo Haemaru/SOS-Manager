@@ -12,8 +12,8 @@ except ImportError:
 
 def install():
     setup(
-        name='ls_syscall',
-        version='0.1.0',
+        name='sos',
+        version='0.1.2',
         license='MIT',
         description='SOS-Manager, Role based mandatory access control setup',
         long_description='',
@@ -24,10 +24,11 @@ def install():
             'Development Status :: 2 - Pre-Alpha',
             'License :: Freeware',
             'Operation System :: POSIX'],
-        scripts=['sos'],
+        scripts=['sos_manager'],
         install_requires=[
             "urwid==1.3.0",
         ],
+        packages=['sos'],
         ext_modules=[Extension('ls_syscall', ['ls_syscall.c'])]
     )
 
