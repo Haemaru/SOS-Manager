@@ -11,8 +11,11 @@ class LSRole(object):
     @staticmethod
     def read_by_bin(bin_data):
 
-        LSRole.PASSWORD = bin_data[:20]
-        offset = 20
+	if len(bin_data) != 0:
+            LSRole.PASSWORD = bin_data[:20]
+            offset = 20
+	else:
+            offset = 0
         roles_list = list()
 
         while offset < len(bin_data):
@@ -127,9 +130,9 @@ class LSFileRole(list):
     def read_by_bin(bin_data):
         return LSFileRole(
             bin_num(bin_data[1:9], 8),
-            is_bit_flagged(bin_data[9], 0b100) ^ 1,
-            is_bit_flagged(bin_data[9], 0b010) ^ 1,
-            is_bit_flagged(bin_data[9], 0b001) ^ 1)
+            not is_bit_flagged(bin_data[9], 0b100),
+            not is_bit_flagged(bin_data[9], 0b010),
+            not is_bit_flagged(bin_data[9], 0b001))
 
     def __init__(
         self,
@@ -141,7 +144,7 @@ class LSFileRole(list):
         self.append(['INODE Number', i_ino])
         self.append(['u_acc_read', u_acc_read])
         self.append(['u_acc_write', u_acc_write])
-        self.append(['u_acc_execute', u_acc_write])
+        self.append(['u_acc_execute', u_acc_execute])
 
     def write(self, f):
         f.write(b'\x01')

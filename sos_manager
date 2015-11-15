@@ -22,6 +22,7 @@ parser.add_argument(
     "mode",
     metavar="mode",
     type=str,
+    default=["manager"],
     help="login | logout | reload | manager | encrypt | unlock | lock | passwd"
 )
 
@@ -50,7 +51,11 @@ def main():
     elif args.mode == 'logout':
         logout()
     elif args.mode == 'reload':
-        ls_reload()
+        ret = ls_reload()
+
+        if ret != 0:
+            sys.stderr.write(RED + "Operation not permitted\n" + NC)
+            sys.exit(-1)
     elif args.mode == 'manager':
         passwd = getpass.getpass()
         ret = login(hashlib.sha1(passwd).digest())
@@ -59,6 +64,7 @@ def main():
             sys.stderr.write(RED + "Operation not permitted\n" + NC)
             sys.exit(-1)
         LSLayout()
+        ls_reload()
         ls_logout()
     elif args.mode == 'encrypt' or args.mode == 'unlock':
         if not len(args.options) == 0:
