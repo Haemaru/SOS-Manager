@@ -15,6 +15,7 @@ __version__ = "0.1.2"
 RED = "\033[0;31m"
 NC = '\033[0m'  # No Color
 
+
 parser = ArgumentParser(description="SOS module manager")
 
 parser.add_argument(
@@ -116,7 +117,8 @@ def main():
 
         ls_reload()
     else:
-        args.print_help()
+	print(RED + args.mode + " is unknown" + NC)
+        parser.print_help()
 
 if __name__ == '__main__':
     main()
