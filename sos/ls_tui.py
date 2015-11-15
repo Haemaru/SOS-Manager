@@ -736,13 +736,10 @@ class LSLayout(object):
             write_data(self.roles_data)
 
 
-f = open("log.txt", "w")
 
 
 def log(text):
-    f.write(str(text) + '\n')
-    f.flush()
-
+    pass
 
 def main():
     LSLayout()
