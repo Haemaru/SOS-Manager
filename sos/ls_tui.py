@@ -701,7 +701,7 @@ class LSLayout(object):
 
         LSLayout.frame_body_columns = urwid.Padding(
             urwid.Columns([
-                ('fixed', 30, LSListLineBox(self.roles, 'Roles')),
+                LSListLineBox(self.roles, 'Roles'),
                 ('fixed', 30, LSListLineBox(self.attr_types, 'Types')),
                 ('fixed', 30, LSListLineBox(self.attrs, 'Attrs')),
                 ('fixed', 30, LSListLineBox(self.attr_values, 'Values')),

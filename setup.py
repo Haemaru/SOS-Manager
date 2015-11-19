@@ -13,7 +13,7 @@ except ImportError:
 def install():
     setup(
         name='sos',
-        version='0.1.3',
+        version='0.1.7',
         license='MIT',
         description='SOS-Manager, Role based mandatory access control setup',
         long_description='',

@@ -13,6 +13,7 @@ from sos.user import login, logout
 
 __version__ = "0.1.2"
 RED = "\033[0;31m"
+GREEN = "\033[0;32m"
 NC = '\033[0m'  # No Color
 
 
@@ -57,6 +58,9 @@ def main():
             sys.stderr.write(RED + "Operation not permitted\n" + NC)
             sys.exit(-1)
     elif args.mode == 'manager':
+        if not os.access("/etc/data.sos", os.W_OK):
+	    sys.stderr.write(RED + "Operation not permitted\n" + NC)
+            sys.exit(-1)    	
         passwd = getpass.getpass()
         ret = login(hashlib.sha1(passwd).digest())
 
@@ -73,15 +77,16 @@ def main():
 		# keyctl
                 passwd = getpass.getpass("Encryption password: ")
                 os.system(
-                    "keyctl new_session && mount -t  ecryptfs "
+                    "keyctl new_session 1>/dev/null && mount -t  ecryptfs "
                     + target + " "
                     + target
                     + " -o key=passphrase:passphrase_passwd=" + passwd
                     + " -o ecryptfs_enable_filename_crypto=n"
                     + " -o ecryptfs_cipher=aes"
                     + " -o ecryptfs_key_bytes=24"
-                    + " -o ecryptfs_passthrough"
+                    + " -o ecryptfs_passthrough 1>/dev/null"
                 )
+                print(GREEN + "Encrypted" + NC)
             else:
                 sys.stderr.write(RED + "SRC_DIR is not directory\n" + NC)
                 sys.exit(-1)
@@ -92,7 +97,7 @@ def main():
         if not len(args.options) == 0:
             target = args.options
             if isdir(target):
-                os.system("umount " + target)
+                os.system("umount " + target + " 1>/dev/null")
             else:
                 sys.stderr.write(RED + "SRC_DIR is not directory\n" + NC)
                 sys.exit(-1)
